@@ -1,7 +1,4 @@
 from rest_framework.views import APIView
-from rest_framework.renderers import JSONRenderer
-from django.core.validators import validate_email
-from phonenumber_field.validators import validate_international_phonenumber
 from rest_framework.response import Response
 
 from api.services import create_customer, update_customer

@@ -7,6 +7,14 @@ def fix_eight(num):
     return num
 
 
+def pre_validate_phonenumber(num):
+    num = fix_eight(num)
+    for index, character in enumerate(num):
+        if character == ' ' or character == '-' or character == '(' or character == ')':
+            num.replace(num[index], '', 1)
+    return num
+
+
 def create_customer(data):
     res = {}
     cred_type = data['credential_type']
