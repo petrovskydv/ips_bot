@@ -1,0 +1,26 @@
+version: '3'
+services:
+  postgres:
+    image: "postgres:12.0-alpine"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-ips2021}
+      POSTGRES_USER: ${POSTGRES_USER-ips_user}
+      POSTGRES_DB: ${POSTGRES_USER-ips_base}
+    restart: always
+
+  node-red:
+    image: nodered/node-red
+    volumes:
+      - "/opt/volumes2/nnp_node_red/:/data"
+    ports:
+      - "1885:1880"
+    env_file:
+      - node-red.env
+    restart: always
+
+volumes:
+  postgres_data:

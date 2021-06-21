@@ -1,0 +1,23 @@
+[
+    {
+        "match": {
+            "uri": "/static/*"
+        },
+        "action": {
+            "share": "/opt/ips_bot/"
+        }
+    },
+    {
+        "match": {
+            "uri": "/media/*"
+        },
+        "action": {
+            "share": "/opt/ips_bot/"
+        }
+    },
+    {
+        "action": {
+            "pass": "applications/ips_django"
+        }
+    }
+]

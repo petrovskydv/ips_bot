@@ -1,0 +1,5 @@
+# Project exclude paths
+/venv/
+/static/
+test_payload
+node-red.env
