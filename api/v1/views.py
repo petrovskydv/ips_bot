@@ -22,3 +22,4 @@ class RegestrationApi(APIView):
         if update_customer(serializer.validated_data):
             return Response({"updated": "yes"}, status=200)
         return Response({"updated": "no"}, status=400)
+    #test diff
