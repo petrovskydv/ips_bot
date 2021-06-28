@@ -21,6 +21,7 @@ class RegestrationApi(APIView):
     # test diff 5
     # test diff 6
     # test diff 7
+    # test diff 16
     # test diff 8
     # test diff 10
     def update(self, request):
