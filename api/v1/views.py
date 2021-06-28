@@ -18,6 +18,9 @@ class RegestrationApi(APIView):
     # test diff 1
     # test diff 2
     # test diff 4
+    # test diff 5
+    # test diff 6
+    # test diff 7
     def update(self, request):
         serializer = CustomerSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
