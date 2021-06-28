@@ -17,6 +17,7 @@ class RegestrationApi(APIView):
         return Response({"created": "no"}, status=400)
     # test diff 1
     # test diff 2
+    # test diff 4
     def update(self, request):
         serializer = CustomerSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
