@@ -2,7 +2,7 @@ from rest_framework import serializers
 from phonenumber_field.validators import validate_international_phonenumber
 from django.core.validators import validate_email
 
-from api.services import pre_validate_phonenumber
+from api.services import normalize_phonenumber
 from content.models import Customer
 
 
@@ -16,8 +16,9 @@ class CustomerSerializer(serializers.Serializer):
         cred = data['credential']
         tg_chat_id = data['tg_chat_id']
         if cred_type == 'phonenumber':
-            cred = pre_validate_phonenumber(cred)
+            cred = normalize_phonenumber(cred)
             validate_international_phonenumber(cred)
+            data['credential'] = cred
         if cred_type == 'email':
             if cred == '' or cred == ' ':
                 raise serializers.ValidationError('Пустой имеил')

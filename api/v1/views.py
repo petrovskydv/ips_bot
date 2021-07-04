@@ -5,7 +5,7 @@ from api.services import create_customer, update_customer
 from api.serializers import CustomerSerializer
 
 
-class RegestrationApi(APIView):
+class RegistrationApi(APIView):
     '''
     check credentials and create/update customer
     '''
@@ -15,8 +15,7 @@ class RegestrationApi(APIView):
         if create_customer(serializer.validated_data):
             return Response({"created": "yes"}, status=200)
         return Response({"created": "no"}, status=400)
-    # test diff 1
-    # test diff 2
+
     def update(self, request):
         serializer = CustomerSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
