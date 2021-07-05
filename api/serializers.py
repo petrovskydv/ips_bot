@@ -3,18 +3,19 @@ from phonenumber_field.validators import validate_international_phonenumber
 from django.core.validators import validate_email
 
 from api.services import normalize_phonenumber
-from content.models import Customer
 
 
 class CustomerSerializer(serializers.Serializer):
     credential_type = serializers.CharField(required=True, allow_blank=False)
     credential = serializers.CharField(required=True, allow_blank=False)
+    password = serializers.CharField(required=False, allow_blank=True)
     tg_chat_id = serializers.IntegerField(required=True)
 
     def validate(self, data):
+        # TODO validate cred types
         cred_type = data['credential_type']
         cred = data['credential']
-        tg_chat_id = data['tg_chat_id']
+        pw = data['password']
         if cred_type == 'phonenumber':
             cred = normalize_phonenumber(cred)
             validate_international_phonenumber(cred)
@@ -23,6 +24,12 @@ class CustomerSerializer(serializers.Serializer):
             if cred == '' or cred == ' ':
                 raise serializers.ValidationError('Пустой имеил')
             validate_email(cred)
-        if Customer.objects.filter(tg_chat_id=tg_chat_id).count() != 0:
-            raise serializers.ValidationError('Пользователь с таким тг чат айди уже существует')
+        if cred_type == 'login':
+            if pw == '' or pw == ' ':
+                raise serializers.ValidationError('Пустой пароль')
         return data
+
+
+class TariffSerializer(serializers.Serializer):
+    new_tariff_link_id = serializers.IntegerField(required=True)
+    tg_chat_id = serializers.IntegerField(required=True)
