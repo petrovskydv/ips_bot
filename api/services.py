@@ -100,3 +100,17 @@ def change_tariff(validated_data):
     response = requests.get(url, payload=payload)
     response.raise_for_status()
     return True if response['result'] == 'OK' else False
+
+
+def fetch_tariffs():
+    tariffs = Tariff.objects.all()
+    tariffs_info = []
+    for tariff in tariffs:
+        tariff_info = {
+            'id': tariff.netup_tariff_id,
+            'name': tariff.title,
+            'comments': tariff.description,
+            'cost': tariff.cost,
+        }
+        tariffs_info.append(tariff_info)
+    return tariffs_info

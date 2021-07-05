@@ -1,8 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import api_view
 
 from api.services import (create_customer, update_customer, fetch_customer_profile, change_tariff, login_to_netup,
-                          normalize_customer_data)
+                          normalize_customer_data, fetch_tariffs)
 from api.serializers import CustomerSerializer, TariffSerializer
 
 
@@ -46,3 +47,9 @@ class ChangeTariff(APIView):
         if change_tariff(serializer.validated_data):
             return Response({"changed": "yes"}, status=200)
         return Response({"changed": "no"}, status=400)
+
+
+@api_view(['GET'])
+def fetch_tariffs_view(request):
+    tariffs = fetch_tariffs()
+    return Response(tariffs, status=200)

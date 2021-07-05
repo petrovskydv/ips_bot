@@ -25,6 +25,9 @@ class Tariff(models.Model):
     main = models.BooleanField(
         "Основной тариф"
     )
+    description = models.TextField(
+        "Описание тарифа"
+    )
 
 
 class Customer(models.Model):
