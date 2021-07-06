@@ -1,4 +1,5 @@
 import requests
+import json
 
 from content.models import Customer, Tariff
 from django.db.models import Q
@@ -33,8 +34,8 @@ def normalize_customer_data(data: dict) -> dict:
 
 def create_customer(data: dict) -> bool:
     # somewhat dead branch
-    customer = Customer.objects.create(**data)
-    customer.save()
+    # customer = Customer.objects.create(**data)
+    # customer.save()
     return True
 
 
@@ -56,35 +57,38 @@ def get_or_create_customer(data: dict) -> bool:
 def login_to_netup(validated_data: dict) -> dict:
     login = validated_data['credential']
     password = validated_data['password']
-    print(login, password)
-    url = 'http://localhost/customer_api/login'
-    payload = {
+    url = 'http://46.101.245.26:1488/customer_api/login'
+    data = json.dumps({
         "login": login,
         "password": password
-    }
-    response = requests.post(url, payload=payload)
+    })
+    session = requests.session()
+    response = session.post(url, data=data)
     response.raise_for_status()
-    print(response.text())
-    is_new_customer = get_or_create_customer(validated_data)
+    print(response.text)
+    # is_new_customer = get_or_create_customer(validated_data)
+    is_new_customer = True
+    fetch_customer_profile(validated_data, is_new_customer, session)
     return {'success': True, 'new_customer': is_new_customer}
 
 
-def fetch_customer_profile(validated_data, is_new_customer):
-    url = 'http://localhost/customer_api/auth/profile'
-    response = requests.get(url)
+def fetch_customer_profile(validated_data, is_new_customer, session):
+    url = 'http://46.101.245.26:1488/customer_api/auth/profile'
+    response = session.get(url)
     response.raise_for_status()
     profile_data = response.json()
-    if is_new_customer:
-        update_customer(profile_data, validated_data)
+    print(profile_data)
+    # if is_new_customer:
+    #     update_customer(profile_data, validated_data)
     # TODO посчитать сколько дней до отключения
     # TODO вывести больше информации о тарифах
-    customer_info = {
-        'is_active': profile_data['is_active'],
-        'balance': profile_data['balance'],
-        'tariffs': profile_data['tariffs'],
-        'full_name': profile_data['full_name']
-    }
-    return customer_info
+    # customer_info = {
+    #     'is_active': profile_data['is_active'],
+    #     'balance': profile_data['balance'],
+    #     'tariffs': profile_data['tariffs'],
+    #     'full_name': profile_data['full_name']
+    # }
+    return True
 
 
 def change_tariff(validated_data):

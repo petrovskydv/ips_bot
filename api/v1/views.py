@@ -33,7 +33,8 @@ class LoginApi(APIView):
         serializer.is_valid(raise_exception=True)
         validated_data = normalize_customer_data(serializer.validated_data)
         result = login_to_netup(validated_data)
-        customer_info = fetch_customer_profile(validated_data, result['is_new_customer'])
+        customer_info = 'gogogogo'
+        # customer_info = fetch_customer_profile(validated_data, result['is_new_customer'])
         if result['success']:
             return Response({"login": "yes", 'customer_info': customer_info}, status=200)
         return Response({"login": "no"}, status=400)
