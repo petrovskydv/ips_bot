@@ -31,9 +31,12 @@ class Tariff(models.Model):
     )
     cost = models.PositiveIntegerField(
         "Стоимость",
+        blank=True,
+        null=True
     )
     description = models.TextField(
-        "Описание тарифа"
+        "Описание тарифа",
+        blank=True
     )
 
 

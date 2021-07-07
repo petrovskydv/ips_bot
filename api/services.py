@@ -1,5 +1,6 @@
 import requests
 import json
+import uuid
 
 from content.models import Customer, Tariff
 from django.db.models import Q
@@ -44,15 +45,18 @@ def create_customer(data: dict) -> bool:
     return True
 
 
-def update_customer(tg_chat_id: str, tariffs: dict):
-    # TODO сделать комманду заполняющую бд тарифы
-    # tariff_netup_ids = [tariff['id'] for tariff in tariffs']
-    # tariffs = Tariff.objects.filter(netup_tariff_id__in=tariff_netup_ids)
-
+def update_customer(tg_chat_id: str, profile_data: dict):
+    # TODO сделать manage-комманду заполняющую бд тарифы
     customer = Customer.objects.get(tg_chat_id=tg_chat_id)
-    customer.update(netup_account_id=profile_data['id'])
-    customer.add(*tariffs)
+    customer.netup_account_id = profile_data['netup_account_id']
     customer.save()
+    TariffRelation = Customer.tariffs.through
+    relations = []
+    for tariff in profile_data['tariffs']:
+        tariff, _ = Tariff.objects.get_or_create(**tariff)
+        relations.append(TariffRelation(id=uuid.uuid4(), customer_id=customer, tariff_id=tariff))
+    TariffRelation.objects.bulk_create(relations, len(relations))
+    print('eto tarify kustomera', customer.tariffs)
     return True
 
 
@@ -98,13 +102,13 @@ def fetch_customer_profile(tg_chat_id):
         update_customer(tg_chat_id, {'netup_account_id': netup_account_id, 'tariffs': tariffs})
     # TODO посчитать сколько дней до отключения
     # TODO вывести больше информации о тарифах
-    # customer_info = {
-    #     'is_active': profile_data['is_active'],
-    #     'balance': profile_data['balance'],
-    #     'tariffs': profile_data['tariffs'],
-    #     'full_name': profile_data['full_name']
-    # }
-    return True
+    customer_info = {
+        'is_active': profile_data['is_active'],
+        'balance': profile_data['balance'],
+        'tariffs': profile_data['tariffs'],
+        'full_name': profile_data['full_name']
+    }
+    return customer_info
 
 
 def change_tariff(validated_data):

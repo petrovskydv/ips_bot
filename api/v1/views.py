@@ -42,8 +42,8 @@ class FetchCustomerInfo(APIView):
 
     def post(self, request):
         tg_chat_id = request.data['tg_chat_id']
-        fetch_customer_profile(tg_chat_id)
-        return Response({"login": "yes"}, status=200)
+        customer_info = fetch_customer_profile(tg_chat_id)
+        return Response(customer_info, status=200)
 
 
 class ChangeTariff(APIView):
