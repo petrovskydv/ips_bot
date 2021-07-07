@@ -5,6 +5,16 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 
 class Tariff(models.Model):
+    class Types(models.TextChoices):
+        INTERNET = 'IN', ('Интернет')
+        TV = 'TV', ('ТВ каналы')
+
+    tariff_type = models.CharField(
+        'Тип тарифа',
+        max_length=2,
+        choices=Types.choices,
+        default=Types.INTERNET
+    )
     netup_tariff_id = models.PositiveIntegerField(
         "Tariff ID",
         db_index=True,
@@ -21,9 +31,6 @@ class Tariff(models.Model):
     )
     cost = models.PositiveIntegerField(
         "Стоимость",
-    )
-    main = models.BooleanField(
-        "Основной тариф"
     )
     description = models.TextField(
         "Описание тарифа"
@@ -70,6 +77,10 @@ class Customer(models.Model):
     tariffs = models.ManyToManyField(
         Tariff,
         through='TariffRelation',
+        blank=True
+    )
+    netup_sid = models.TextField(
+        "Айди сессии",
         blank=True
     )
 

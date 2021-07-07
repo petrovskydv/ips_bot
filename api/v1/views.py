@@ -31,13 +31,19 @@ class LoginApi(APIView):
     def post(self, request):
         serializer = CustomerSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        validated_data = normalize_customer_data(serializer.validated_data)
-        result = login_to_netup(validated_data)
-        customer_info = 'gogogogo'
-        # customer_info = fetch_customer_profile(validated_data, result['is_new_customer'])
+        normalized_data = normalize_customer_data(serializer.validated_data)
+        result = login_to_netup(normalized_data)
         if result['success']:
-            return Response({"login": "yes", 'customer_info': customer_info}, status=200)
+            return Response({"login": "yes"}, status=200)
         return Response({"login": "no"}, status=400)
+
+
+class FetchCustomerInfo(APIView):
+
+    def post(self, request):
+        tg_chat_id = request.data['tg_chat_id']
+        fetch_customer_profile(tg_chat_id)
+        return Response({"login": "yes"}, status=200)
 
 
 class ChangeTariff(APIView):
