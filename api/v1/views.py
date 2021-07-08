@@ -34,8 +34,9 @@ class LoginApi(APIView):
         normalized_data = normalize_customer_data(serializer.validated_data)
         result = login_to_netup(normalized_data)
         if result['success']:
-            return Response({"login": "yes"}, status=200)
-        return Response({"login": "no"}, status=400)
+            return Response({"login": True}, status=200)
+        # TODO yes/no to bool!
+        return Response({"login": False}, status=400)
 
 
 class FetchCustomerInfo(APIView):
@@ -60,3 +61,6 @@ class ChangeTariff(APIView):
 def fetch_tariffs_view(request):
     tariffs = fetch_tariffs()
     return Response(tariffs, status=200)
+
+
+#TODO запелить ручку инфу по тарифу по айди

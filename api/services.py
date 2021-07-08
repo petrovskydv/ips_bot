@@ -60,8 +60,15 @@ def update_customer(tg_chat_id: str, profile_data: dict):
     return True
 
 
-def get_or_create_customer(data: dict) -> bool:
-    _, created = Customer.objects.get_or_create(**data)
+def identify_customer(data: dict) -> bool:
+    customer, created = Customer.objects.get_or_create(data['tg_chat_id'])
+    if not created:
+        if data['password'] == customer.password and data['login'] == customer.login:
+            customer.netup_sid = data['netup_sid']
+            customer.save()
+            return True
+        else:
+            return False
     return created
 
 
@@ -80,8 +87,8 @@ def login_to_netup(normalized_data: dict) -> dict:
     sid_customer = cookies.items()[0][1]
     normalized_data['netup_sid'] = sid_customer
     print(normalized_data)
-    get_or_create_customer(normalized_data)
-    return {'success': True}
+    is_identified = identify_customer(normalized_data)
+    return {'success': is_identified}
 
 
 def fetch_customer_profile(tg_chat_id):
