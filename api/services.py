@@ -128,19 +128,22 @@ def fetch_customer_profile(tg_chat_id):
     return customer_info
 
 
-def change_tariff(validated_data):
-    customer = Customer.objects.get(tg_chat_id=validated_data['tg_chat_id'])
+def change_tariff(tg_chat_id, new_tariff_id):
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
 
-    url = 'http://localhost/customer_api/auth/tariffs'
-    # TODO сделать нормальное получение нетапп линк айди
-    payload = {
-        "tariff_link_id": customer.tariffs.filter(main=True).netup_tariff_link_id,
-        "account_id": customer.netup_account_id,
-        "next_tariff_id": validated_data['new_tariff_link_id'],
-    }
-    response = requests.get(url, payload=payload)
+    url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
+    payload = json.dumps({
+        "tariff_link_id": int(customer.tariffs.all()[0].netup_tariff_link_id),
+        "account_id": int(customer.netup_account_id),
+        "next_tariff_id": new_tariff_id
+    })
+    session = requests.session()
+    session.cookies.update([('sid_customer', customer.netup_sid)])
+    response = session.post(url, data=payload)
     response.raise_for_status()
-    return True if response['result'] == 'OK' else False
+    unpucked_response = response.json()
+    print(unpucked_response)
+    return True
 
 
 def fetch_tariffs(tg_chat_id: int) -> dict:
