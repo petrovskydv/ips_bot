@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view
 
 from api.services import (create_customer, update_customer, fetch_customer_profile, change_tariff, login_to_netup,
                           normalize_customer_data, fetch_tariffs)
-from api.serializers import CustomerSerializer, TariffSerializer
+from api.serializers import CustomerSerializer
 
 
 class RegistrationApi(APIView):
@@ -49,11 +49,13 @@ class FetchCustomerInfo(APIView):
 class ChangeTariff(APIView):
 
     def post(self, request):
-        serializer = TariffSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        if change_tariff(serializer.validated_data):
-            return Response({"changed": "yes"}, status=200)
-        return Response({"changed": "no"}, status=400)
+        tg_chat_id = request.data['tg_chat_id']
+        old_tariff_id = request.data['old_tariff_id']
+        new_tariff_id = request.data['new_tariff_id']
+        is_changed = fetch_tariffs()
+        if is_changed:
+            return Response({"changed": is_changed}, status=200)
+        return Response({"changed": is_changed}, status=400)
 
 
 @api_view(['POST'])
@@ -62,5 +64,3 @@ def fetch_tariffs_view(request):
     tariffs = fetch_tariffs(tg_chat_id)
     return Response(tariffs, status=200)
 
-
-#TODO запелить ручку инфу по тарифу по айди

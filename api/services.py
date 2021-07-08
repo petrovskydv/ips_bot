@@ -143,15 +143,21 @@ def change_tariff(validated_data):
     return True if response['result'] == 'OK' else False
 
 
-def fetch_tariffs(tg_chat_id):
+def fetch_tariffs(tg_chat_id: int) -> dict:
     customer = Customer.objects.get(tg_chat_id=tg_chat_id)
-    url = 'http://46.101.245.26:1488/customer_api/auth/profile'
+    recorded_customer_tariffs_ids = list(customer.tariffs.values_list('netup_tariff_id', flat=True))
+
     session = requests.session()
     session.cookies.update([('sid_customer', customer.netup_sid)])
-    print('customera ', customer.tariffs)
-
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
     response = session.get(url)
     response.raise_for_status()
-    print('v celom', response.json())
-    return response.json()
+    all_tariffs = response.json()
+
+    for tariff in all_tariffs:
+        tariff['activated'] = False
+        if tariff['id'] in recorded_customer_tariffs_ids:
+            tariff['name'] = f"[Подключён] {tariff['name']}"
+            tariff['activated'] = True
+
+    return all_tariffs

@@ -31,5 +31,6 @@ class CustomerSerializer(serializers.Serializer):
 
 
 class TariffSerializer(serializers.Serializer):
+    # dead brunch
     new_tariff_link_id = serializers.IntegerField(required=True)
     tg_chat_id = serializers.IntegerField(required=True)
