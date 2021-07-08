@@ -128,12 +128,12 @@ def fetch_customer_profile(tg_chat_id):
     return customer_info
 
 
-def change_tariff(tg_chat_id, new_tariff_id):
+def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
     customer = Customer.objects.get(tg_chat_id=tg_chat_id)
 
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
     payload = json.dumps({
-        "tariff_link_id": int(customer.tariffs.all()[0].netup_tariff_link_id),
+        "tariff_link_id": int(customer.tariffs.get(netup_tariff_id=old_tariff_id).netup_tariff_link_id),
         "account_id": int(customer.netup_account_id),
         "next_tariff_id": new_tariff_id
     })

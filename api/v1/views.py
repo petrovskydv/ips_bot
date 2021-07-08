@@ -51,7 +51,8 @@ class ChangeTariff(APIView):
     def post(self, request):
         tg_chat_id = request.data['tg_chat_id']
         new_tariff_id = request.data['new_tariff_id']
-        is_changed = change_tariff(tg_chat_id, new_tariff_id)
+        old_tariff_id = request.data['old_tariff_id']
+        is_changed = change_tariff(tg_chat_id, new_tariff_id, old_tariff_id)
         if is_changed:
             return Response({"changed": is_changed}, status=200)
         return Response({"changed": is_changed}, status=400)
