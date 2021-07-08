@@ -3,6 +3,7 @@ import json
 import uuid
 
 from content.models import Customer, Tariff
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 
 
@@ -45,31 +46,44 @@ def create_customer(data: dict) -> bool:
     return True
 
 
-def update_customer(tg_chat_id: str, profile_data: dict):
-    # TODO сделать manage-комманду заполняющую бд тарифы
-    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
-    customer.netup_account_id = profile_data['netup_account_id']
-    customer.save()
+def rewrite_customer_tariffs(customer, tariffs):
+    # TODO тариф обновился и пользователь на него перешел, но в базе все ещё старый
+    customer.tariffs.all().delete()
     TariffRelation = Customer.tariffs.through
     relations = []
-    for tariff in profile_data['tariffs']:
+    for tariff in tariffs:
         tariff, _ = Tariff.objects.get_or_create(**tariff)
         relations.append(TariffRelation(id=uuid.uuid4(), customer_id=customer, tariff_id=tariff))
     TariffRelation.objects.bulk_create(relations, len(relations))
-    print('eto tarify kustomera', customer.tariffs)
+
+
+def update_customer(customer, profile_data: dict):
+    # TODO сделать manage-комманду заполняющую бд тарифы
+    customer.netup_account_id = profile_data['netup_account_id']
+    customer.save()
+    recorded_customer_tariffs_ids = list(customer.tariffs.values_list('netup_tariff_id', flat=True))
+    fetched_tariffs_ids = [tariff['netup_tariff_id'] for tariff in profile_data['tariffs']]
+
+    for tariff_id in fetched_tariffs_ids:
+        if tariff_id not in recorded_customer_tariffs_ids:
+            rewrite_customer_tariffs(customer, profile_data['tariffs'])
+            break
+    print(customer.tariffs.all())
     return True
 
 
 def identify_customer(data: dict) -> bool:
-    customer, created = Customer.objects.get_or_create(data['tg_chat_id'])
-    if not created:
+    try:
+        customer = Customer.objects.get(tg_chat_id=data['tg_chat_id'])
         if data['password'] == customer.password and data['login'] == customer.login:
             customer.netup_sid = data['netup_sid']
             customer.save()
             return True
         else:
             return False
-    return created
+    except ObjectDoesNotExist:
+        Customer.objects.create(**data)
+        return True
 
 
 def login_to_netup(normalized_data: dict) -> dict:
@@ -99,14 +113,10 @@ def fetch_customer_profile(tg_chat_id):
     response = session.get(url)
     response.raise_for_status()
     profile_data = response.json()
-    print('profiledata ', profile_data)
 
     tariffs = normalize_tariffs(profile_data['tariffs'])
     netup_account_id = profile_data['id']
-    is_new_profile = customer.netup_account_id == ''
-    print('eto tarify ', tariffs)
-    if is_new_profile:
-        update_customer(tg_chat_id, {'netup_account_id': netup_account_id, 'tariffs': tariffs})
+    update_customer(customer, {'netup_account_id': netup_account_id, 'tariffs': tariffs})
     # TODO посчитать сколько дней до отключения
     # TODO вывести больше информации о тарифах
     customer_info = {
@@ -133,15 +143,15 @@ def change_tariff(validated_data):
     return True if response['result'] == 'OK' else False
 
 
-def fetch_tariffs():
-    tariffs = Tariff.objects.all()
-    tariffs_info = []
-    for tariff in tariffs:
-        tariff_info = {
-            'id': tariff.netup_tariff_id,
-            'name': tariff.title,
-            'comments': tariff.description,
-            'cost': tariff.cost,
-        }
-        tariffs_info.append(tariff_info)
-    return tariffs_info
+def fetch_tariffs(tg_chat_id):
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    url = 'http://46.101.245.26:1488/customer_api/auth/profile'
+    session = requests.session()
+    session.cookies.update([('sid_customer', customer.netup_sid)])
+    print('customera ', customer.tariffs)
+
+    url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
+    response = session.get(url)
+    response.raise_for_status()
+    print('v celom', response.json())
+    return response.json()

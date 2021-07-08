@@ -35,7 +35,6 @@ class LoginApi(APIView):
         result = login_to_netup(normalized_data)
         if result['success']:
             return Response({"login": True}, status=200)
-        # TODO yes/no to bool!
         return Response({"login": False}, status=400)
 
 
@@ -57,9 +56,10 @@ class ChangeTariff(APIView):
         return Response({"changed": "no"}, status=400)
 
 
-@api_view(['GET'])
+@api_view(['POST'])
 def fetch_tariffs_view(request):
-    tariffs = fetch_tariffs()
+    tg_chat_id = request.data['tg_chat_id']
+    tariffs = fetch_tariffs(tg_chat_id)
     return Response(tariffs, status=200)
 
 
