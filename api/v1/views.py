@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 
 from api.services import (create_customer, update_customer, fetch_customer_profile, change_tariff, login_to_netup,
-                          normalize_customer_data, fetch_tariffs)
+                          normalize_customer_data, fetch_tariffs, fetch_tariff_info)
 from api.serializers import CustomerSerializer
 
 
@@ -64,3 +64,10 @@ def fetch_tariffs_view(request):
     tariffs = fetch_tariffs(tg_chat_id)
     return Response(tariffs, status=200)
 
+
+@api_view(['POST'])
+def fetch_tariff(request):
+    tg_chat_id = request.data['tg_chat_id']
+    tariff_id = request.data['tariff_id']
+    tariff_info = fetch_tariff_info(tg_chat_id, tariff_id)
+    return Response(tariff_info, status=200)

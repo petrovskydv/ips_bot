@@ -164,3 +164,17 @@ def fetch_tariffs(tg_chat_id: int) -> dict:
             tariff['activated'] = True
 
     return all_tariffs
+
+
+def fetch_tariff_info(tg_chat_id: int, tariff_id: int) -> dict:
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    session = requests.session()
+    session.cookies.update([('sid_customer', customer.netup_sid)])
+    url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
+    response = session.get(url)
+    response.raise_for_status()
+    all_tariffs = response.json()
+    for tariff in all_tariffs:
+        if tariff['id'] == tariff_id:
+            return tariff
+    return {}
