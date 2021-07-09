@@ -185,7 +185,7 @@ def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
     unpucked_response = response.json()
     if unpucked_response:
         change_tariff_relation(customer, new_tariff_id, old_tariff_id)
-    return unpucked_response
+    return unpucked_response['result'] == 'OK'
 
 
 def fetch_tariffs(tg_chat_id: int) -> dict:
