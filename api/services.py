@@ -49,7 +49,8 @@ def create_customer(data: dict) -> bool:
 
 def rewrite_customer_tariffs(customer, tariffs):
     # TODO тариф обновился и пользователь на него перешел, но в базе все ещё старый
-    customer.tariffs.all().delete()
+    # TODO bulk_create слишком пафосно
+    customer.subscription_set.all().delete()
     Subscription = Customer.tariffs.through
     relations = []
     for tariff in tariffs:

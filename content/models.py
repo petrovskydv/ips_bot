@@ -36,17 +36,16 @@ class Tariff(models.Model):
 
 
 class Customer(models.Model):
+    # TODO придумать как красиво вернуть юник рестрикшен для альтернативных полей типов аутентификации
     phonenumber = PhoneNumberField(
         "Номер телефона",
         db_index=True,
-        unique=True,
         blank=True,
     )
     email = models.CharField(
         "Имеил",
         max_length=50,
         db_index=True,
-        unique=True,
         blank=True,
     )
     login = models.CharField(
