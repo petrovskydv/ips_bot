@@ -33,6 +33,11 @@ class Tariff(models.Model):
         "Описание тарифа",
         blank=True
     )
+    instant_change = models.BooleanField(
+        "Сразу ли сменится",
+        blank=True,
+        null=True
+    )
 
 
 class Customer(models.Model):

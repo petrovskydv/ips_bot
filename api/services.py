@@ -97,7 +97,25 @@ def update_customer(customer, profile_data: dict):
     return True
 
 
-def update_tariffs(tariffs):
+def fetch_change_status(tg_chat_id) -> dict:
+    # TODO полубому формирования словаря можно сделать красивее
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    session = requests.session()
+    session.cookies.update([('sid_customer', customer.netup_sid)])
+    url = 'http://46.101.245.26:1488/customer_api/auth/switchtariffsettings'
+    response = session.get(url)
+    response.raise_for_status()
+    tariff_change_status = {}
+    for tariff_group in response.json():
+        change_status = tariff_group['instant_change']
+        tariff_ids = [tariff['tariff_id'] for tariff in tariff_group['data']]
+        for tariff_id in tariff_ids:
+            tariff_change_status[tariff_id] = change_status
+    return tariff_change_status
+
+
+def update_tariffs(tariffs, tg_chat_id):
+    change_status = fetch_change_status(tg_chat_id)
     for tariff in tariffs:
         recorded_tariff, created = Tariff.objects.get_or_create(netup_tariff_id=tariff['netup_tariff_id'])
         recorded_tariff.title = tariff['title']
@@ -107,6 +125,7 @@ def update_tariffs(tariffs):
             pass
         recorded_tariff.cost = tariff['cost']
         recorded_tariff.tariff_type = 'TV' if 'ТВ' in tariff['title'] else 'IN'
+        recorded_tariff.instant_change = change_status[tariff['netup_tariff_id']]
         recorded_tariff.save()
 
 
@@ -199,7 +218,7 @@ def fetch_tariffs(tg_chat_id: int) -> dict:
     response.raise_for_status()
     all_tariffs = response.json()
     normalized_tariffs = normalize_tariffs(copy.deepcopy(all_tariffs))
-    update_tariffs(normalized_tariffs)
+    update_tariffs(normalized_tariffs, tg_chat_id)
 
     # TODO избавить фронт от этого формата тарифов
     for tariff in all_tariffs:
@@ -227,6 +246,7 @@ def fetch_tariff_info(tg_chat_id: int, tariff_id: int) -> dict:
 
 def fetch_available_tariffs_info(tg_chat_id: int, tariff_id: int):
     # TODO Когда поменяется формат тарифов на фронте можно тут поменять всё и убрать дубли кода от DRYить так сказать
+    # TODO убрать миллиард запросов к бд!
     tariff = Tariff.objects.get(netup_tariff_id=tariff_id)
     tariff_type = tariff.tariff_type
     available_tariffs = Tariff.objects.filter(tariff_type=tariff_type).all().exclude(pk=tariff.pk)
@@ -239,4 +259,10 @@ def fetch_available_tariffs_info(tg_chat_id: int, tariff_id: int):
     response = session.get(url)
     response.raise_for_status()
     all_tariffs = response.json()
-    return [tariff for tariff in all_tariffs if tariff['id'] in available_tariffs_ids]
+    available_tariffs = []
+    for tariff in all_tariffs:
+        if tariff['id'] in available_tariffs_ids:
+            recodred_tariff = Tariff.objects.get(pk=tariff['id'])
+            tariff['instant_change'] = recodred_tariff.instant_change
+            available_tariffs.append(tariff)
+    return available_tariffs
