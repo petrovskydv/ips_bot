@@ -39,6 +39,7 @@ def normalize_tariffs(tariffs: dict) -> dict:
         tariff.pop('tariff_link_id', None)
     return tariffs
 
+
 def create_customer(data: dict) -> bool:
     # somewhat dead branch
     # customer = Customer.objects.create(**data)
@@ -49,12 +50,16 @@ def create_customer(data: dict) -> bool:
 def rewrite_customer_tariffs(customer, tariffs):
     # TODO тариф обновился и пользователь на него перешел, но в базе все ещё старый
     customer.tariffs.all().delete()
-    TariffRelation = Customer.tariffs.through
+    Subscription = Customer.tariffs.through
     relations = []
     for tariff in tariffs:
-        tariff, _ = Tariff.objects.get_or_create(**tariff)
-        relations.append(TariffRelation(id=uuid.uuid4(), customer_id=customer, tariff_id=tariff))
-    TariffRelation.objects.bulk_create(relations, len(relations))
+        link_id = tariff.pop('netup_tariff_link_id')
+        try:
+            tariff = Tariff.objects.get(netup_tariff_id=tariff['netup_tariff_id'])
+        except ObjectDoesNotExist:
+            tariff = Tariff.objects.create(**tariff)
+        relations.append(Subscription(id=uuid.uuid4(), customer_id=customer, tariff_id=tariff, link_id=link_id))
+    Subscription.objects.bulk_create(relations, len(relations))
 
 
 def update_customer(customer, profile_data: dict):
@@ -118,7 +123,6 @@ def fetch_customer_profile(tg_chat_id):
     netup_account_id = profile_data['id']
     update_customer(customer, {'netup_account_id': netup_account_id, 'tariffs': tariffs})
     # TODO посчитать сколько дней до отключения
-    # TODO вывести больше информации о тарифах
     customer_info = {
         'is_active': profile_data['is_active'],
         'balance': profile_data['balance'],
@@ -132,8 +136,12 @@ def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
     customer = Customer.objects.get(tg_chat_id=tg_chat_id)
 
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
+    link_id = customer.subscription_set.get(
+        customer_id=customer,
+        tariff_id=customer.tariffs.get(netup_tariff_id=old_tariff_id)
+    )
     payload = json.dumps({
-        "tariff_link_id": int(customer.tariffs.get(netup_tariff_id=old_tariff_id).netup_tariff_link_id),
+        "tariff_link_id": int(link_id),
         "account_id": int(customer.netup_account_id),
         "next_tariff_id": new_tariff_id
     })
