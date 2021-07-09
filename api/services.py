@@ -201,6 +201,7 @@ def fetch_tariffs(tg_chat_id: int) -> dict:
     normalized_tariffs = normalize_tariffs(copy.deepcopy(all_tariffs))
     update_tariffs(normalized_tariffs)
 
+    # TODO избавить фронт от этого формата тарифов
     for tariff in all_tariffs:
         tariff['activated'] = False
         if tariff['id'] in recorded_customer_tariffs_ids:
@@ -222,3 +223,20 @@ def fetch_tariff_info(tg_chat_id: int, tariff_id: int) -> dict:
         if tariff['id'] == tariff_id:
             return tariff
     return {}
+
+
+def fetch_available_tariffs_info(tg_chat_id: int, tariff_id: int):
+    # TODO Когда поменяется формат тарифов на фронте можно тут поменять всё и убрать дубли кода от DRYить так сказать
+    tariff = Tariff.objects.get(netup_tariff_id=tariff_id)
+    tariff_type = tariff.tariff_type
+    available_tariffs = Tariff.objects.filter(tariff_type=tariff_type).all().exclude(pk=tariff.pk)
+    available_tariffs_ids = list(available_tariffs.values_list('netup_tariff_id', flat=True))
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+
+    session = requests.session()
+    session.cookies.update([('sid_customer', customer.netup_sid)])
+    url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
+    response = session.get(url)
+    response.raise_for_status()
+    all_tariffs = response.json()
+    return [tariff for tariff in all_tariffs if tariff['id'] in available_tariffs_ids]
