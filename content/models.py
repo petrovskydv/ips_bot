@@ -73,8 +73,7 @@ class Customer(models.Model):
     netup_account_id = models.CharField(
         "Биллинг айди",
         max_length=30,
-        blank=True,
-        unique=True
+        blank=True
     )
     tariffs = models.ManyToManyField(
         Tariff,
