@@ -1,6 +1,7 @@
 import requests
 import json
 import uuid
+import copy
 
 from content.models import Customer, Tariff
 from django.core.exceptions import ObjectDoesNotExist
@@ -35,8 +36,16 @@ def normalize_tariffs(tariffs: dict) -> dict:
         tariff.pop('id', None)
         tariff['title'] = tariff['name']
         tariff.pop('name', None)
-        tariff['netup_tariff_link_id'] = tariff['tariff_link_id']
-        tariff.pop('tariff_link_id', None)
+        try:
+            tariff['netup_tariff_link_id'] = tariff['tariff_link_id']
+            tariff.pop('tariff_link_id', None)
+        except KeyError:
+            pass
+        try:
+            tariff['description'] = tariff['comments']
+            tariff.pop('comment', None)
+        except KeyError:
+            pass
     return tariffs
 
 
@@ -63,12 +72,22 @@ def rewrite_customer_tariffs(customer, tariffs):
     Subscription.objects.bulk_create(relations, len(relations))
 
 
+def change_tariff_relation(customer, new_tariff_id: int, old_tariff_id: int):
+    # TODO вроде, линк айди не меняется от смены тарифа, но потом надо добавить проверку
+    old_tariff = Tariff.objects.get(netup_tariff_id=old_tariff_id)
+    new_tariff = Tariff.objects.get(netup_tariff_id=new_tariff_id)
+    Subscription = Customer.tariffs.through
+    relation = Subscription.objects.get(customer_id=customer, tariff_id=old_tariff)
+    relation.tariff_id = new_tariff
+    relation.save()
+    return True
+
+
 def update_customer(customer, profile_data: dict):
-    # TODO сделать manage-комманду заполняющую бд тарифы
     customer.netup_account_id = profile_data['netup_account_id']
     customer.save()
-    recorded_customer_tariffs_ids = list(customer.tariffs.values_list('netup_tariff_id', flat=True))
     fetched_tariffs_ids = [tariff['netup_tariff_id'] for tariff in profile_data['tariffs']]
+    recorded_customer_tariffs_ids = list(customer.tariffs.values_list('netup_tariff_id', flat=True))
 
     for tariff_id in fetched_tariffs_ids:
         if tariff_id not in recorded_customer_tariffs_ids:
@@ -76,6 +95,19 @@ def update_customer(customer, profile_data: dict):
             break
     print(customer.tariffs.all())
     return True
+
+
+def update_tariffs(tariffs):
+    for tariff in tariffs:
+        recorded_tariff, created = Tariff.objects.get_or_create(netup_tariff_id=tariff['netup_tariff_id'])
+        recorded_tariff.title = tariff['title']
+        try:
+            recorded_tariff.description = tariff['description']
+        except KeyError:
+            pass
+        recorded_tariff.cost = tariff['cost']
+        recorded_tariff.tariff_type = 'TV' if 'ТВ' in tariff['title'] else 'IN'
+        recorded_tariff.save()
 
 
 def identify_customer(data: dict) -> bool:
@@ -140,7 +172,7 @@ def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
     link_id = customer.subscription_set.get(
         customer_id=customer,
         tariff_id=customer.tariffs.get(netup_tariff_id=old_tariff_id)
-    )
+    ).link_id
     payload = json.dumps({
         "tariff_link_id": int(link_id),
         "account_id": int(customer.netup_account_id),
@@ -151,8 +183,9 @@ def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
     response = session.post(url, data=payload)
     response.raise_for_status()
     unpucked_response = response.json()
-    print(unpucked_response)
-    return True
+    if unpucked_response:
+        change_tariff_relation(customer, new_tariff_id, old_tariff_id)
+    return unpucked_response
 
 
 def fetch_tariffs(tg_chat_id: int) -> dict:
@@ -165,6 +198,8 @@ def fetch_tariffs(tg_chat_id: int) -> dict:
     response = session.get(url)
     response.raise_for_status()
     all_tariffs = response.json()
+    normalized_tariffs = normalize_tariffs(copy.deepcopy(all_tariffs))
+    update_tariffs(normalized_tariffs)
 
     for tariff in all_tariffs:
         tariff['activated'] = False
