@@ -261,8 +261,8 @@ def fetch_available_tariffs_info(tg_chat_id: int, tariff_id: int):
     tariff_type = tariff.tariff_type
     available_tariffs = Tariff.objects.filter(tariff_type=tariff_type).all().exclude(pk=tariff.pk)
     available_tariffs_ids = list(available_tariffs.values_list('netup_tariff_id', flat=True))
-    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
 
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
     session = requests.session()
     session.cookies.update([('sid_customer', customer.netup_sid)])
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
@@ -276,3 +276,20 @@ def fetch_available_tariffs_info(tg_chat_id: int, tariff_id: int):
             tariff['instant_change'] = recodred_tariff.instant_change
             available_tariffs.append(tariff)
     return available_tariffs
+
+
+def connect_tariff(tg_chat_id: int, tariff_id: int):
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+
+    session = requests.session()
+    session.cookies.update([('sid_customer', customer.netup_sid)])
+    url = 'http://46.101.245.26:1488/customer_api/auth/independent_connect_services'
+    payload = json.dumps({
+        "account_id": int(customer.netup_account_id),
+        "setting_id": tariff_id
+    })
+    response = session.post(url, data=payload)
+    response.raise_for_status()
+    unpucked_response = response.json()
+    print('response!! ', unpucked_response)
+    return unpucked_response['result'] == 'OK'

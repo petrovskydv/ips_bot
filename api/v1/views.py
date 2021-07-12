@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view
 
 from api.services import (create_customer, update_customer, fetch_customer_profile, change_tariff, login_to_netup,
                           normalize_customer_data, fetch_tariffs, fetch_tariff_info, fetch_available_tariffs_info,
-                          logout_from_netup
+                          logout_from_netup, connect_tariff
 )
 from api.serializers import CustomerSerializer
 
@@ -90,3 +90,15 @@ def fetch_available_tariffs_view(request):
     tariff_id = request.data['tariff_id']
     available_tariffs = fetch_available_tariffs_info(tg_chat_id, tariff_id)
     return Response(available_tariffs, status=200)
+
+
+@api_view(['POST'])
+def add_tariff(request):
+    tg_chat_id = request.data['tg_chat_id']
+    tariff_id = request.data['tariff_id']
+    result = connect_tariff(tg_chat_id, tariff_id)
+    if result:
+        return Response({"added": result}, status=200)
+    return Response({"added": result}, status=400)
+
+

@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views import (RegistrationApi, LoginApi, ChangeTariff, FetchCustomerInfo, fetch_tariffs_view, fetch_tariff,
-                    fetch_available_tariffs_view, LogoutApi
+                    fetch_available_tariffs_view, LogoutApi, add_tariff
 )
 
 urlpatterns = [
@@ -13,4 +13,5 @@ urlpatterns = [
     path('tariffs/', fetch_tariffs_view),
     path('fetchavailabletarifs/', fetch_available_tariffs_view),
     path('tariffinfo/', fetch_tariff),
+    path('addtariff/', add_tariff),
 ]
