@@ -266,7 +266,7 @@ def fetch_available_tariffs_info(tg_chat_id: int, tariff_id: int):
     available_tariffs = []
     for tariff in normalized_tariffs:
         if tariff['netup_tariff_id'] in available_tariffs_ids:
-            recodred_tariff = Tariff.objects.get(pk=tariff['id'])
+            recodred_tariff = Tariff.objects.get(pk=tariff['netup_tariff_id'])
             tariff['instant_change'] = recodred_tariff.instant_change
             available_tariffs.append(tariff)
     return available_tariffs
