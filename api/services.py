@@ -32,10 +32,16 @@ def normalize_customer_data(data: dict) -> dict:
 
 def normalize_tariffs(tariffs: dict) -> dict:
     for tariff in tariffs:
-        tariff['netup_tariff_id'] = tariff['id']
-        tariff.pop('id', None)
-        tariff['title'] = tariff['name']
-        tariff.pop('name', None)
+        try:
+            tariff['netup_tariff_id'] = tariff['id']
+            tariff.pop('id', None)
+        except KeyError:
+            pass
+        try:
+            tariff['title'] = tariff['name']
+            tariff.pop('name', None)
+        except KeyError:
+            pass
         try:
             tariff['netup_tariff_link_id'] = tariff['tariff_link_id']
             tariff.pop('tariff_link_id', None)
@@ -157,9 +163,14 @@ def login_to_netup(normalized_data: dict) -> dict:
     cookies = session.cookies
     sid_customer = cookies.items()[0][1]
     normalized_data['netup_sid'] = sid_customer
-    print(normalized_data)
     is_identified = identify_customer(normalized_data)
     return {'success': is_identified}
+
+
+def logout_from_netup(tg_chat_id):
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    customer.delete()
+    return {'success': True}
 
 
 def fetch_customer_profile(tg_chat_id):
@@ -209,6 +220,7 @@ def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
 
 def fetch_tariffs(tg_chat_id: int) -> dict:
     customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    # TODO понять, точно ли нужно отмечать подключенные тарифы?
     recorded_customer_tariffs_ids = list(customer.tariffs.values_list('netup_tariff_id', flat=True))
 
     session = requests.session()
@@ -220,11 +232,10 @@ def fetch_tariffs(tg_chat_id: int) -> dict:
     normalized_tariffs = normalize_tariffs(copy.deepcopy(all_tariffs))
     update_tariffs(normalized_tariffs, tg_chat_id)
 
-    # TODO избавить фронт от этого формата тарифов
-    for tariff in all_tariffs:
+    for tariff in normalized_tariffs:
         tariff['activated'] = False
-        if tariff['id'] in recorded_customer_tariffs_ids:
-            tariff['name'] = f"[Подключён] {tariff['name']}"
+        if tariff['netup_tariff_id'] in recorded_customer_tariffs_ids:
+            tariff['title'] = f"[Подключён] {tariff['title']}"
             tariff['activated'] = True
 
     return all_tariffs
@@ -237,15 +248,14 @@ def fetch_tariff_info(tg_chat_id: int, tariff_id: int) -> dict:
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
     response = session.get(url)
     response.raise_for_status()
-    all_tariffs = response.json()
-    for tariff in all_tariffs:
-        if tariff['id'] == tariff_id:
+    normalized_tariffs = normalize_tariffs(response.json())
+    for tariff in normalized_tariffs:
+        if tariff['netup_tariff_id'] == tariff_id:
             return tariff
     return {}
 
 
 def fetch_available_tariffs_info(tg_chat_id: int, tariff_id: int):
-    # TODO Когда поменяется формат тарифов на фронте можно тут поменять всё и убрать дубли кода от DRYить так сказать
     # TODO убрать миллиард запросов к бд!
     tariff = Tariff.objects.get(netup_tariff_id=tariff_id)
     tariff_type = tariff.tariff_type
@@ -258,11 +268,11 @@ def fetch_available_tariffs_info(tg_chat_id: int, tariff_id: int):
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
     response = session.get(url)
     response.raise_for_status()
-    all_tariffs = response.json()
+    normalized_tariffs = normalize_tariffs(response.json())
     available_tariffs = []
-    for tariff in all_tariffs:
-        if tariff['id'] in available_tariffs_ids:
-            recodred_tariff = Tariff.objects.get(pk=tariff['id'])
+    for tariff in normalized_tariffs:
+        if tariff['netup_tariff_id'] in available_tariffs_ids:
+            recodred_tariff = Tariff.objects.get(pk=tariff['netup_tariff_id'])
             tariff['instant_change'] = recodred_tariff.instant_change
             available_tariffs.append(tariff)
     return available_tariffs

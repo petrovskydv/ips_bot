@@ -3,7 +3,9 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 
 from api.services import (create_customer, update_customer, fetch_customer_profile, change_tariff, login_to_netup,
-                          normalize_customer_data, fetch_tariffs, fetch_tariff_info, fetch_available_tariffs_info)
+                          normalize_customer_data, fetch_tariffs, fetch_tariff_info, fetch_available_tariffs_info,
+                          logout_from_netup
+)
 from api.serializers import CustomerSerializer
 
 
@@ -36,6 +38,15 @@ class LoginApi(APIView):
         if result['success']:
             return Response({"login": True}, status=200)
         return Response({"login": False}, status=400)
+
+
+class LogoutApi(APIView):
+
+    def post(self, request):
+        result = logout_from_netup(request.data['tg_chat_id'])
+        if result['success']:
+            return Response({"logout": True}, status=200)
+        return Response({"logout": False}, status=400)
 
 
 class FetchCustomerInfo(APIView):
