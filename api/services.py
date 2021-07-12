@@ -169,6 +169,7 @@ def login_to_netup(normalized_data: dict) -> dict:
 
 def logout_from_netup(tg_chat_id):
     customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    customer.subscription_set.all().delete()
     customer.delete()
     return {'success': True}
 
