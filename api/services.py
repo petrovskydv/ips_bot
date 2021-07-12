@@ -167,6 +167,12 @@ def login_to_netup(normalized_data: dict) -> dict:
     return {'success': is_identified}
 
 
+def logout_from_netup(tg_chat_id):
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    customer.delete()
+    return {'success': True}
+
+
 def fetch_customer_profile(tg_chat_id):
     customer = Customer.objects.get(tg_chat_id=tg_chat_id)
     url = 'http://46.101.245.26:1488/customer_api/auth/profile'
