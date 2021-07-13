@@ -174,13 +174,18 @@ def fetch_customer_profile(tg_chat_id):
     tariffs = normalize_tariffs(profile_data['tariffs'])
     netup_account_id = profile_data['id']
     update_customer(customer, {'netup_account_id': netup_account_id, 'tariffs': tariffs})
+
+    recommended_payment = profile_data['payment_in_month'] - profile_data['balance']
+    if recommended_payment <= 0:
+        recommended_payment = 0
     customer_info = {
         'is_active': profile_data['is_active'],
         'balance': profile_data['balance'],
         'tariffs': profile_data['tariffs'],
         'credit': profile_data['credit'],
         'payment_in_month': profile_data['payment_in_month'],
-        'full_name': profile_data['full_name']
+        'full_name': profile_data['full_name'],
+        'recommended_payment': recommended_payment
     }
     return customer_info
 
@@ -251,6 +256,19 @@ def connect_tariff(tg_chat_id: int, tariff_id: int):
     payload = json.dumps({
         "account_id": int(customer.netup_account_id),
         "setting_id": tariff_id
+    })
+    response = session.post(url, data=payload)
+    response.raise_for_status()
+    unpucked_response = response.json()
+    return unpucked_response['result'] == 'OK'
+
+
+def make_promised_payment(tg_chat_id: int, value: int):
+    session, customer = make_session_customer(tg_chat_id)
+    url = 'http://46.101.245.26:1488/customer_api/auth/promisedpayment'
+    payload = json.dumps({
+        "account_id": int(customer.netup_account_id),
+        "value": value
     })
     response = session.post(url, data=payload)
     response.raise_for_status()
