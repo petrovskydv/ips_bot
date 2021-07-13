@@ -1,7 +1,9 @@
 from django.urls import path
 
-from .views import (LoginApi, ChangeTariff, FetchCustomerInfo, fetch_tariffs_view, fetch_tariff,
-                    fetch_available_tariffs_view, LogoutApi, add_tariff, make_promised_payment_view
+from .views import (
+    LoginApi, ChangeTariff, FetchCustomerInfo, fetch_tariffs_view, fetch_tariff,
+    fetch_available_tariffs_view, LogoutApi, add_tariff, make_promised_payment_view,
+    check_promised_payment_view
 )
 
 urlpatterns = [
@@ -14,4 +16,5 @@ urlpatterns = [
     path('tariffinfo/', fetch_tariff),
     path('addtariff/', add_tariff),
     path('promisedpayment/', make_promised_payment_view),
+    path('promisedpayment/status', check_promised_payment_view),
 ]

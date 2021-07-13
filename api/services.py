@@ -265,6 +265,21 @@ def connect_tariff(tg_chat_id: int, tariff_id: int):
 
 def make_promised_payment(tg_chat_id: int, value: int):
     session, customer = make_session_customer(tg_chat_id)
+
+    url = 'http://46.101.245.26:1488/customer_api/auth/promisedpaymentsettings'
+    response = session.get(url)
+    unpucked_response = response.json()
+    max_value = unpucked_response['max_value']
+    min_balance = unpucked_response['min_balance']
+
+    url = 'http://46.101.245.26:1488/customer_api/auth/profile'
+    response = session.get(url)
+    response.raise_for_status()
+    balance = response.json()['balance']
+
+    if value > max_value or balance < min_balance:
+        return False
+
     url = 'http://46.101.245.26:1488/customer_api/auth/promisedpayment'
     payload = json.dumps({
         "account_id": int(customer.netup_account_id),
@@ -274,3 +289,25 @@ def make_promised_payment(tg_chat_id: int, value: int):
     response.raise_for_status()
     unpucked_response = response.json()
     return unpucked_response['result'] == 'OK'
+
+
+def fetch_promised_payment_status(tg_chat_id: int):
+    session, customer = make_session_customer(tg_chat_id)
+
+    url = 'http://46.101.245.26:1488/customer_api/auth/promisedpaymentsettings'
+    response = session.get(url)
+    unpucked_response = response.json()
+    max_value = unpucked_response['max_value']
+    min_balance = unpucked_response['min_balance']
+    is_enabled = unpucked_response['is_enabled'] == 1
+
+    url = 'http://46.101.245.26:1488/customer_api/auth/profile'
+    response = session.get(url)
+    response.raise_for_status()
+    balance = response.json()['balance']
+
+    return {
+        'balance_allowed': balance > min_balance,
+        'is_enabled': is_enabled,
+        'max_value': max_value
+    }
