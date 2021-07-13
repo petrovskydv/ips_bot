@@ -2,30 +2,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 
-from api.services import (create_customer, update_customer, fetch_customer_profile, change_tariff, login_to_netup,
-                          normalize_customer_data, fetch_tariffs, fetch_tariff_info, fetch_available_tariffs_info,
-                          logout_from_netup, connect_tariff
+from api.services import (fetch_customer_profile, change_tariff, login_to_netup, normalize_customer_data, fetch_tariffs,
+                          fetch_tariff_info, fetch_available_tariffs_info, logout_from_netup, connect_tariff
 )
 from api.serializers import CustomerSerializer
-
-
-class RegistrationApi(APIView):
-    '''
-    dead branch at this moment
-    '''
-    def post(self, request):
-        serializer = CustomerSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        if create_customer(serializer.validated_data):
-            return Response({"created": "yes"}, status=200)
-        return Response({"created": "no"}, status=400)
-
-    def update(self, request):
-        serializer = CustomerSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        if update_customer(serializer.validated_data):
-            return Response({"updated": "yes"}, status=200)
-        return Response({"updated": "no"}, status=400)
 
 
 class LoginApi(APIView):
@@ -86,9 +66,8 @@ def fetch_tariff(request):
 
 @api_view(['POST'])
 def fetch_available_tariffs_view(request):
-    tg_chat_id = request.data['tg_chat_id']
     tariff_id = request.data['tariff_id']
-    available_tariffs = fetch_available_tariffs_info(tg_chat_id, tariff_id)
+    available_tariffs = fetch_available_tariffs_info(tariff_id)
     return Response(available_tariffs, status=200)
 
 

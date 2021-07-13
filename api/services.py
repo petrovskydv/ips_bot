@@ -5,7 +5,6 @@ import copy
 
 from content.models import Customer, Tariff
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q
 
 
 def fix_eight(num: str) -> str:
@@ -20,6 +19,13 @@ def normalize_phonenumber(num: str) -> str:
         if character == ' ' or character == '-' or character == '(' or character == ')':
             num.replace(num[index], '', 1)
     return num
+
+
+def make_session_customer(tg_chat_id):
+    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    session = requests.session()
+    session.cookies.update([('sid_customer', customer.netup_sid)])
+    return session, customer
 
 
 def normalize_customer_data(data: dict) -> dict:
@@ -49,17 +55,10 @@ def normalize_tariffs(tariffs: dict) -> dict:
             pass
         try:
             tariff['description'] = tariff['comments']
-            tariff.pop('comment', None)
+            tariff.pop('comments', None)
         except KeyError:
             pass
     return tariffs
-
-
-def create_customer(data: dict) -> bool:
-    # somewhat dead branch
-    # customer = Customer.objects.create(**data)
-    # customer.save()
-    return True
 
 
 def rewrite_customer_tariffs(customer, tariffs):
@@ -99,15 +98,11 @@ def update_customer(customer, profile_data: dict):
         if tariff_id not in recorded_customer_tariffs_ids:
             rewrite_customer_tariffs(customer, profile_data['tariffs'])
             break
-    print(customer.tariffs.all())
     return True
 
 
-def fetch_change_status(tg_chat_id) -> dict:
+def fetch_change_status(session) -> dict:
     # TODO полубому формирования словаря можно сделать красивее
-    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
-    session = requests.session()
-    session.cookies.update([('sid_customer', customer.netup_sid)])
     url = 'http://46.101.245.26:1488/customer_api/auth/switchtariffsettings'
     response = session.get(url)
     response.raise_for_status()
@@ -120,8 +115,8 @@ def fetch_change_status(tg_chat_id) -> dict:
     return tariff_change_status
 
 
-def update_tariffs(tariffs, tg_chat_id):
-    change_status = fetch_change_status(tg_chat_id)
+def update_tariffs(tariffs, session):
+    change_status = fetch_change_status(session)
     for tariff in tariffs:
         recorded_tariff, created = Tariff.objects.get_or_create(netup_tariff_id=tariff['netup_tariff_id'])
         recorded_tariff.title = tariff['title']
@@ -175,10 +170,8 @@ def logout_from_netup(tg_chat_id):
 
 
 def fetch_customer_profile(tg_chat_id):
-    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    session, customer = make_session_customer(tg_chat_id)
     url = 'http://46.101.245.26:1488/customer_api/auth/profile'
-    session = requests.session()
-    session.cookies.update([('sid_customer', customer.netup_sid)])
     response = session.get(url)
     response.raise_for_status()
     profile_data = response.json()
@@ -197,7 +190,7 @@ def fetch_customer_profile(tg_chat_id):
 
 
 def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
-    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    session, customer = make_session_customer(tg_chat_id)
 
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
     link_id = customer.subscription_set.get(
@@ -209,8 +202,6 @@ def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
         "account_id": int(customer.netup_account_id),
         "next_tariff_id": new_tariff_id
     })
-    session = requests.session()
-    session.cookies.update([('sid_customer', customer.netup_sid)])
     response = session.post(url, data=payload)
     response.raise_for_status()
     unpucked_response = response.json()
@@ -220,18 +211,15 @@ def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
 
 
 def fetch_tariffs(tg_chat_id: int) -> dict:
-    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    session, customer = make_session_customer(tg_chat_id)
     # TODO понять, точно ли нужно отмечать подключенные тарифы?
     recorded_customer_tariffs_ids = list(customer.tariffs.values_list('netup_tariff_id', flat=True))
-
-    session = requests.session()
-    session.cookies.update([('sid_customer', customer.netup_sid)])
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
     response = session.get(url)
     response.raise_for_status()
     all_tariffs = response.json()
     normalized_tariffs = normalize_tariffs(copy.deepcopy(all_tariffs))
-    update_tariffs(normalized_tariffs, tg_chat_id)
+    update_tariffs(normalized_tariffs, session)
 
     for tariff in normalized_tariffs:
         tariff['activated'] = False
@@ -239,13 +227,11 @@ def fetch_tariffs(tg_chat_id: int) -> dict:
             tariff['title'] = f"[Подключён] {tariff['title']}"
             tariff['activated'] = True
 
-    return all_tariffs
+    return normalized_tariffs
 
 
 def fetch_tariff_info(tg_chat_id: int, tariff_id: int) -> dict:
-    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
-    session = requests.session()
-    session.cookies.update([('sid_customer', customer.netup_sid)])
+    session, customer = make_session_customer(tg_chat_id)
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
     response = session.get(url)
     response.raise_for_status()
@@ -256,34 +242,16 @@ def fetch_tariff_info(tg_chat_id: int, tariff_id: int) -> dict:
     return {}
 
 
-def fetch_available_tariffs_info(tg_chat_id: int, tariff_id: int):
-    # TODO убрать миллиард запросов к бд!
+def fetch_available_tariffs_info(tariff_id: int):
     tariff = Tariff.objects.get(netup_tariff_id=tariff_id)
     tariff_type = tariff.tariff_type
-    available_tariffs = Tariff.objects.filter(tariff_type=tariff_type).all().exclude(pk=tariff.pk)
-    available_tariffs_ids = list(available_tariffs.values_list('netup_tariff_id', flat=True))
+    available_tariffs = Tariff.objects.filter(tariff_type=tariff_type).all().exclude(pk=tariff.pk).values()
 
-    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
-    session = requests.session()
-    session.cookies.update([('sid_customer', customer.netup_sid)])
-    url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
-    response = session.get(url)
-    response.raise_for_status()
-    normalized_tariffs = normalize_tariffs(response.json())
-    available_tariffs = []
-    for tariff in normalized_tariffs:
-        if tariff['netup_tariff_id'] in available_tariffs_ids:
-            recodred_tariff = Tariff.objects.get(pk=tariff['netup_tariff_id'])
-            tariff['instant_change'] = recodred_tariff.instant_change
-            available_tariffs.append(tariff)
     return available_tariffs
 
 
 def connect_tariff(tg_chat_id: int, tariff_id: int):
-    customer = Customer.objects.get(tg_chat_id=tg_chat_id)
-
-    session = requests.session()
-    session.cookies.update([('sid_customer', customer.netup_sid)])
+    session, customer = make_session_customer(tg_chat_id)
     url = 'http://46.101.245.26:1488/customer_api/auth/independent_connect_services'
     payload = json.dumps({
         "account_id": int(customer.netup_account_id),
@@ -292,5 +260,4 @@ def connect_tariff(tg_chat_id: int, tariff_id: int):
     response = session.post(url, data=payload)
     response.raise_for_status()
     unpucked_response = response.json()
-    print('response!! ', unpucked_response)
     return unpucked_response['result'] == 'OK'
