@@ -178,6 +178,8 @@ def fetch_customer_profile(tg_chat_id):
         'is_active': profile_data['is_active'],
         'balance': profile_data['balance'],
         'tariffs': profile_data['tariffs'],
+        'credit': profile_data['credit'],
+        'payment_in_month': profile_data['payment_in_month'],
         'full_name': profile_data['full_name']
     }
     return customer_info
