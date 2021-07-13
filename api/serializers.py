@@ -12,7 +12,6 @@ class CustomerSerializer(serializers.Serializer):
     tg_chat_id = serializers.IntegerField(required=True)
 
     def validate(self, data):
-        # TODO validate cred types
         cred_type = data['credential_type']
         cred = data['credential']
         pw = data['password']

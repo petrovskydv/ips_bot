@@ -29,7 +29,6 @@ def make_session_customer(tg_chat_id):
 
 
 def normalize_customer_data(data: dict) -> dict:
-    # TODO перенести эту штуку в сериалайзер
     data[data['credential_type']] = data['credential']
     data.pop('credential_type', None)
     data.pop('credential', None)
@@ -62,8 +61,6 @@ def normalize_tariffs(tariffs: dict) -> dict:
 
 
 def rewrite_customer_tariffs(customer, tariffs):
-    # TODO тариф обновился и пользователь на него перешел, но в базе все ещё старый
-    # TODO bulk_create слишком пафосно
     customer.subscription_set.all().delete()
     Subscription = Customer.tariffs.through
     relations = []
@@ -78,7 +75,6 @@ def rewrite_customer_tariffs(customer, tariffs):
 
 
 def change_tariff_relation(customer, new_tariff_id: int, old_tariff_id: int):
-    # TODO вроде, линк айди не меняется от смены тарифа, но потом надо добавить проверку
     old_tariff = Tariff.objects.get(netup_tariff_id=old_tariff_id)
     new_tariff = Tariff.objects.get(netup_tariff_id=new_tariff_id)
     Subscription = Customer.tariffs.through
@@ -102,7 +98,6 @@ def update_customer(customer, profile_data: dict):
 
 
 def fetch_change_status(session) -> dict:
-    # TODO полубому формирования словаря можно сделать красивее
     url = 'http://46.101.245.26:1488/customer_api/auth/switchtariffsettings'
     response = session.get(url)
     response.raise_for_status()
@@ -179,7 +174,6 @@ def fetch_customer_profile(tg_chat_id):
     tariffs = normalize_tariffs(profile_data['tariffs'])
     netup_account_id = profile_data['id']
     update_customer(customer, {'netup_account_id': netup_account_id, 'tariffs': tariffs})
-    # TODO посчитать сколько дней до отключения
     customer_info = {
         'is_active': profile_data['is_active'],
         'balance': profile_data['balance'],
@@ -212,7 +206,6 @@ def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
 
 def fetch_tariffs(tg_chat_id: int) -> dict:
     session, customer = make_session_customer(tg_chat_id)
-    # TODO понять, точно ли нужно отмечать подключенные тарифы?
     recorded_customer_tariffs_ids = list(customer.tariffs.values_list('netup_tariff_id', flat=True))
     url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
     response = session.get(url)
