@@ -3,7 +3,7 @@ from django.urls import path
 from .views import (
     LoginApi, ChangeTariff, FetchCustomerInfo, fetch_tariffs_view, fetch_tariff,
     fetch_available_tariffs_view, LogoutApi, add_tariff, make_promised_payment_view,
-    check_promised_payment_view
+    check_promised_payment_view, fetch_payment_history_view
 )
 
 urlpatterns = [
@@ -17,4 +17,5 @@ urlpatterns = [
     path('addtariff/', add_tariff),
     path('promisedpayment/', make_promised_payment_view),
     path('promisedpayment/status', check_promised_payment_view),
+    path('payments/history', fetch_payment_history_view),
 ]
