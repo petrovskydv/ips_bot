@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view
 from api.services import (
     fetch_customer_profile, change_tariff, login_to_netup, normalize_customer_data, fetch_tariffs,
     fetch_tariff_info, fetch_available_tariffs_info, logout_from_netup, connect_tariff,
-    make_promised_payment, fetch_promised_payment_status
+    make_promised_payment, fetch_promised_payment_status, fetch_payment_history
 )
 from api.serializers import CustomerSerializer
 
@@ -83,7 +83,6 @@ def add_tariff(request):
     return Response({"added": result}, status=400)
 
 
-
 @api_view(['POST'])
 def make_promised_payment_view(request):
     tg_chat_id = request.data['tg_chat_id']
@@ -98,4 +97,11 @@ def make_promised_payment_view(request):
 def check_promised_payment_view(request):
     tg_chat_id = request.data['tg_chat_id']
     result = fetch_promised_payment_status(tg_chat_id)
+    return Response(result, status=200)
+
+
+@api_view(['POST'])
+def fetch_payment_history_view(request):
+    tg_chat_id = request.data['tg_chat_id']
+    result = fetch_payment_history(tg_chat_id)
     return Response(result, status=200)

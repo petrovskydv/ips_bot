@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import requests
 import json
 import uuid
@@ -311,3 +313,25 @@ def fetch_promised_payment_status(tg_chat_id: int):
         'is_enabled': is_enabled,
         'max_value': max_value
     }
+
+
+def fetch_payment_history(tg_chat_id: int):
+    session, customer = make_session_customer(tg_chat_id)
+    url = 'http://46.101.245.26:1488/customer_api/auth/full_statistics'
+    params = {'range': 12}
+    response = session.get(url, params=params)
+    response.raise_for_status()
+    payments = response.json()
+    return convert_payments(payments)
+
+
+def convert_payments(payments):
+    payment_types_compliance = {
+        'Card payment': 'Платеж картой',
+        'Credit': 'Кредит',
+        'Cash payment': 'Платеж наличными',
+    }
+    for payment in payments:
+        payment['event_name'] = payment_types_compliance[payment['event_name']]
+        payment['actual_date'] = datetime.utcfromtimestamp(payment['actual_date']).strftime('%d.%m.%Y %H:%M')
+    return payments
