@@ -330,8 +330,15 @@ def convert_payments(payments):
         'Card payment': 'Платеж картой',
         'Credit': 'Кредит',
         'Cash payment': 'Платеж наличными',
+        'Wire transfer': 'Перевод средств',
     }
+    converted_payments = []
     for payment in payments:
-        payment['event_name'] = payment_types_compliance[payment['event_name']]
-        payment['actual_date'] = datetime.utcfromtimestamp(payment['actual_date']).strftime('%d.%m.%Y %H:%M')
-    return payments
+        if not payment['event_name'] in payment_types_compliance:
+            continue
+        converted_payments.append({
+            'event_name': payment_types_compliance[payment['event_name']],
+            'actual_date': datetime.utcfromtimestamp(payment['actual_date']).strftime('%d.%m.%Y %H:%M'),
+            'payment_incurrency': payment['payment_incurrency'],
+        })
+    return converted_payments
