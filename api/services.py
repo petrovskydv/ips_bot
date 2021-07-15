@@ -1,3 +1,4 @@
+from contextlib import suppress
 from datetime import datetime
 
 import requests
@@ -9,18 +10,16 @@ from content.models import Customer, Tariff
 from django.core.exceptions import ObjectDoesNotExist
 
 
-def fix_eight(num: str) -> str:
-    if num.startswith('8'):
-        return num.replace('8', '+7')
-    return num
+def fix_eight(phone_number: str) -> str:
+    if phone_number.startswith('8'):
+        return phone_number.replace('8', '+7')
+    return phone_number
 
 
-def normalize_phonenumber(num: str) -> str:
-    num = fix_eight(num)
-    for index, character in enumerate(num):
-        if character == ' ' or character == '-' or character == '(' or character == ')':
-            num.replace(num[index], '', 1)
-    return num
+def normalize_phonenumber(phone_number: str) -> str:
+    phone_number = fix_eight(phone_number)
+    unnecessary_characters = '- ()'
+    return ''.join(list(filter(lambda c: c not in unnecessary_characters, phone_number)))
 
 
 def make_session_customer(tg_chat_id):
@@ -39,26 +38,19 @@ def normalize_customer_data(data: dict) -> dict:
 
 def normalize_tariffs(tariffs: dict) -> dict:
     for tariff in tariffs:
-        try:
+        with suppress(KeyError):
             tariff['netup_tariff_id'] = tariff['id']
             tariff.pop('id', None)
-        except KeyError:
-            pass
-        try:
+
             tariff['title'] = tariff['name']
             tariff.pop('name', None)
-        except KeyError:
-            pass
-        try:
+
             tariff['netup_tariff_link_id'] = tariff['tariff_link_id']
             tariff.pop('tariff_link_id', None)
-        except KeyError:
-            pass
-        try:
+
             tariff['description'] = tariff['comments']
             tariff.pop('comments', None)
-        except KeyError:
-            pass
+
     return tariffs
 
 
