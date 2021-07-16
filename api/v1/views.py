@@ -110,7 +110,7 @@ def fetch_payment_history_view(request):
 
 class CheckDate(APIView):
 
-    def get(self, request):
+    def post(self, request):
         serializer = DateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data, status=200)
