@@ -1,7 +1,9 @@
 from datetime import datetime
 from dateutil import parser
 from dateutil.parser._parser import ParserError
+from datetime import datetime, date
 
+import time
 import requests
 import json
 import uuid
@@ -206,7 +208,7 @@ def fetch_customer_profile(tg_chat_id):
         'full_name': profile_data['full_name'],
         'recommended_payment': recommended_payment
     }
-    return customer_info
+    return profile_data
 
 
 def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
@@ -359,3 +361,41 @@ def convert_payments(payments):
             'payment_incurrency': payment['payment_incurrency'],
         })
     return converted_payments
+
+
+def set_suspend(tg_chat_id, data):
+    session, customer = make_session_customer(tg_chat_id)
+    url = 'http://46.101.245.26:1488/customer_api/auth/enablesuspend'
+    start_timestamp = int(time.mktime(datetime.strptime(str(data['start_date']), "%Y-%m-%d").timetuple()))
+    end_timestamp = int(time.mktime(datetime.strptime(str(data['end_date']), "%Y-%m-%d").timetuple()))
+    print(f'{start_timestamp} \n {end_timestamp}')
+    payload = json.dumps({
+        "account_id": int(customer.netup_account_id),
+        "start": start_timestamp,
+        "end": end_timestamp
+    })
+    response = session.post(url, data=payload)
+    response.raise_for_status()
+    try:
+        unpucked_response = response.json()
+    except json.JSONDecodeError:
+        unpucked_response = {'result': 'NOT OK'}
+    return unpucked_response['result'] == 'OK'
+
+
+def fetch_suspention_settings(tg_chat_id):
+    session, customer = make_session_customer(tg_chat_id)
+    url = 'http://46.101.245.26:1488/customer_api/auth/voluntarysuspensionsettings'
+    response = session.get(url, params={'account_id': int(customer.netup_account_id)})
+    response.raise_for_status()
+    unpucked_response = response.json()
+    block_start = datetime.utcfromtimestamp(int(unpucked_response['block_start'])).strftime('%Y-%m-%d')
+    block_end = datetime.utcfromtimestamp(int(unpucked_response['block_end'])).strftime('%Y-%m-%d')
+    if unpucked_response['is_blocked']:
+        return {
+            'is_blocked': True,
+            'blocked_now': parse_date(block_start) <= date.today(),
+            'block_start': block_start,
+            'block_end': block_end
+        }
+    return {'is_blocked': False}
