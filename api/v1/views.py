@@ -7,7 +7,7 @@ from api.services import (
     fetch_tariff_info, fetch_available_tariffs_info, logout_from_netup, connect_tariff,
     make_promised_payment, fetch_promised_payment_status, fetch_payment_history
 )
-from api.serializers import CustomerSerializer
+from api.serializers import CustomerSerializer, DateSerializer
 
 
 class LoginApi(APIView):
@@ -105,3 +105,10 @@ def fetch_payment_history_view(request):
     tg_chat_id = request.data['tg_chat_id']
     result = fetch_payment_history(tg_chat_id)
     return Response(result, status=200)
+
+@api_view(['GET'])
+def check_date(request):
+    print(request.data)
+    serializer = DateSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    return Response(serializer.validated_data, status=200)

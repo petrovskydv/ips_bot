@@ -1,4 +1,6 @@
 from datetime import datetime
+from dateutil import parser
+from dateutil.parser._parser import ParserError
 
 import requests
 import json
@@ -15,11 +17,19 @@ def fix_eight(num: str) -> str:
     return num
 
 
+def normalize_date(possible_date: str) -> str:
+    chars_to_replace = """_()-.\,"""
+    for character in possible_date:
+        if character in chars_to_replace:
+            possible_date = possible_date.replace(character, ' ')
+    return possible_date
+
+
 def normalize_phonenumber(num: str) -> str:
     num = fix_eight(num)
     for index, character in enumerate(num):
         if character == ' ' or character == '-' or character == '(' or character == ')':
-            num.replace(num[index], '', 1)
+            num = num.replace(num[index], '', 1)
     return num
 
 
@@ -60,6 +70,13 @@ def normalize_tariffs(tariffs: dict) -> dict:
         except KeyError:
             pass
     return tariffs
+
+
+def parse_date(possible_date):
+    try:
+        return parser.parse(possible_date).date()
+    except ParserError:
+        return None
 
 
 def rewrite_customer_tariffs(customer, tariffs):
