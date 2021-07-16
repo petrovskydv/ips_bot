@@ -127,7 +127,8 @@ class SetSuspend(APIView):
                     {
                         'success': True,
                         'start_date': serializer.validated_data['start_date'],
-                        'end_date': serializer.validated_data['end_date']},
+                        'end_date': serializer.validated_data['end_date']
+                    },
                     status=200
                 )
             return Response({'success': False}, status=400)

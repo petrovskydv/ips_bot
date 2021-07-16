@@ -208,7 +208,7 @@ def fetch_customer_profile(tg_chat_id):
         'full_name': profile_data['full_name'],
         'recommended_payment': recommended_payment
     }
-    return profile_data
+    return customer_info
 
 
 def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
