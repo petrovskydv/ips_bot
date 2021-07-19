@@ -368,7 +368,6 @@ def set_suspend(tg_chat_id, data):
     url = 'http://46.101.245.26:1488/customer_api/auth/enablesuspend'
     start_timestamp = int(time.mktime(datetime.strptime(str(data['start_date']), "%Y-%m-%d").timetuple()))
     end_timestamp = int(time.mktime(datetime.strptime(str(data['end_date']), "%Y-%m-%d").timetuple()))
-    print(f'{start_timestamp} \n {end_timestamp}')
     payload = json.dumps({
         "account_id": int(customer.netup_account_id),
         "start": start_timestamp,
@@ -383,7 +382,7 @@ def set_suspend(tg_chat_id, data):
     return unpucked_response['result'] == 'OK'
 
 
-def fetch_suspention_settings(tg_chat_id):
+def fetch_suspension_settings(tg_chat_id):
     session, customer = make_session_customer(tg_chat_id)
     url = 'http://46.101.245.26:1488/customer_api/auth/voluntarysuspensionsettings'
     response = session.get(url, params={'account_id': int(customer.netup_account_id)})
@@ -399,3 +398,18 @@ def fetch_suspention_settings(tg_chat_id):
             'block_end': block_end
         }
     return {'is_blocked': False}
+
+
+def disable_suspension(tg_chat_id):
+    session, customer = make_session_customer(tg_chat_id)
+    url = 'http://46.101.245.26:1488/customer_api/auth/disablesuspend'
+    payload = json.dumps({
+        "account_id": int(customer.netup_account_id)
+    })
+    response = session.post(url, data=payload)
+    response.raise_for_status()
+    try:
+        unpucked_response = response.json()
+    except json.JSONDecodeError:
+        unpucked_response = {'result': 'NOT OK'}
+    return unpucked_response['result'] == 'OK'

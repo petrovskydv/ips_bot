@@ -48,7 +48,6 @@ class DateSerializer(serializers.Serializer):
         parsed_start_date = parse_date(normalized_possible_start_date)
         if not parsed_start_date:
             raise serializers.ValidationError('Дата начала не определяется')
-        normalized_possible_end_date = normalize_date(possible_end_date)
         parsed_end_date = parse_date(normalized_possible_end_date)
         if not parsed_end_date:
             raise serializers.ValidationError('Дата окончания не определяется')

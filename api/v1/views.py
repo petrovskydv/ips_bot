@@ -6,7 +6,7 @@ from api.services import (
     fetch_customer_profile, change_tariff, login_to_netup, normalize_customer_data, fetch_tariffs,
     fetch_tariff_info, fetch_available_tariffs_info, logout_from_netup, connect_tariff,
     make_promised_payment, fetch_promised_payment_status, fetch_payment_history, set_suspend,
-    fetch_suspention_settings
+    fetch_suspension_settings, disable_suspension
 )
 from api.serializers import CustomerSerializer, DateSerializer
 
@@ -135,7 +135,14 @@ class SetSuspend(APIView):
 
 
 @api_view(['POST'])
-def suspention_settings(request):
+def suspension_settings(request):
     tg_chat_id = request.data['tg_chat_id']
-    result = fetch_suspention_settings(tg_chat_id)
+    result = fetch_suspension_settings(tg_chat_id)
     return Response(result, status=200)
+
+
+@api_view(['POST'])
+def suspension_disable(request):
+    tg_chat_id = request.data['tg_chat_id']
+    result = disable_suspension(tg_chat_id)
+    return Response({'success': result}, status=200)
