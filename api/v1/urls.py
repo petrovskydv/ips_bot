@@ -10,7 +10,7 @@ from .views import (
 urlpatterns = [
     path('login/', LoginApi.as_view()),
     path('logout/', LogoutApi.as_view()),
-    path('suspention/set', SetSuspend.as_view()),
+    path('suspension/set', SetSuspend.as_view()),
     path('suspension/settings', suspension_settings),
     path('suspension/disable', suspension_disable),
     path('customerinfo/', FetchCustomerInfo.as_view()),
