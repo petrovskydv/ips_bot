@@ -1,3 +1,4 @@
+from contextlib import suppress
 from datetime import datetime
 from dateutil import parser
 from dateutil.parser._parser import ParserError
@@ -9,14 +10,15 @@ import json
 import uuid
 import copy
 
+from config.settings import NETUP_URL
 from content.models import Customer, Tariff
 from django.core.exceptions import ObjectDoesNotExist
 
 
-def fix_eight(num: str) -> str:
-    if num.startswith('8'):
-        return num.replace('8', '+7')
-    return num
+def fix_eight(phone_number: str) -> str:
+    if phone_number.startswith('8'):
+        return phone_number.replace('8', '+7')
+    return phone_number
 
 
 def normalize_date(possible_date: str) -> str:
@@ -27,12 +29,10 @@ def normalize_date(possible_date: str) -> str:
     return possible_date
 
 
-def normalize_phonenumber(num: str) -> str:
-    num = fix_eight(num)
-    for index, character in enumerate(num):
-        if character == ' ' or character == '-' or character == '(' or character == ')':
-            num = num.replace(num[index], '', 1)
-    return num
+def normalize_phonenumber(phone_number: str) -> str:
+    phone_number = fix_eight(phone_number)
+    unnecessary_characters = '- ()'
+    return ''.join(list(filter(lambda c: c not in unnecessary_characters, phone_number)))
 
 
 def make_session_customer(tg_chat_id):
@@ -51,26 +51,19 @@ def normalize_customer_data(data: dict) -> dict:
 
 def normalize_tariffs(tariffs: dict) -> dict:
     for tariff in tariffs:
-        try:
+        with suppress(KeyError):
             tariff['netup_tariff_id'] = tariff['id']
             tariff.pop('id', None)
-        except KeyError:
-            pass
-        try:
+
             tariff['title'] = tariff['name']
             tariff.pop('name', None)
-        except KeyError:
-            pass
-        try:
+
             tariff['netup_tariff_link_id'] = tariff['tariff_link_id']
             tariff.pop('tariff_link_id', None)
-        except KeyError:
-            pass
-        try:
+
             tariff['description'] = tariff['comments']
             tariff.pop('comments', None)
-        except KeyError:
-            pass
+
     return tariffs
 
 
@@ -119,7 +112,7 @@ def update_customer(customer, profile_data: dict):
 
 
 def fetch_change_status(session) -> dict:
-    url = 'http://46.101.245.26:1488/customer_api/auth/switchtariffsettings'
+    url = f'{NETUP_URL}/customer_api/auth/switchtariffsettings'
     response = session.get(url)
     response.raise_for_status()
     tariff_change_status = {}
@@ -163,7 +156,7 @@ def identify_customer(data: dict) -> bool:
 def login_to_netup(normalized_data: dict) -> dict:
     login = normalized_data['login']
     password = normalized_data['password']
-    url = 'http://46.101.245.26:1488/customer_api/login'
+    url = f'{NETUP_URL}/customer_api/login'
     credentials = json.dumps({
         "login": login,
         "password": password
@@ -188,7 +181,7 @@ def logout_from_netup(tg_chat_id):
 
 def fetch_customer_profile(tg_chat_id):
     session, customer = make_session_customer(tg_chat_id)
-    url = 'http://46.101.245.26:1488/customer_api/auth/profile'
+    url = f'{NETUP_URL}/customer_api/auth/profile'
     response = session.get(url)
     response.raise_for_status()
     profile_data = response.json()
@@ -215,7 +208,7 @@ def fetch_customer_profile(tg_chat_id):
 def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
     session, customer = make_session_customer(tg_chat_id)
 
-    url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
+    url = f'{NETUP_URL}/customer_api/auth/tariffs'
     link_id = customer.subscription_set.get(
         customer_id=customer,
         tariff_id=customer.tariffs.get(netup_tariff_id=old_tariff_id)
@@ -236,7 +229,7 @@ def change_tariff(tg_chat_id, new_tariff_id, old_tariff_id):
 def fetch_tariffs(tg_chat_id: int) -> dict:
     session, customer = make_session_customer(tg_chat_id)
     recorded_customer_tariffs_ids = list(customer.tariffs.values_list('netup_tariff_id', flat=True))
-    url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
+    url = f'{NETUP_URL}/customer_api/auth/tariffs'
     response = session.get(url)
     response.raise_for_status()
     all_tariffs = response.json()
@@ -254,7 +247,7 @@ def fetch_tariffs(tg_chat_id: int) -> dict:
 
 def fetch_tariff_info(tg_chat_id: int, tariff_id: int) -> dict:
     session, customer = make_session_customer(tg_chat_id)
-    url = 'http://46.101.245.26:1488/customer_api/auth/tariffs'
+    url = f'{NETUP_URL}/customer_api/auth/tariffs'
     response = session.get(url)
     response.raise_for_status()
     normalized_tariffs = normalize_tariffs(response.json())
@@ -274,7 +267,7 @@ def fetch_available_tariffs_info(tariff_id: int):
 
 def connect_tariff(tg_chat_id: int, tariff_id: int):
     session, customer = make_session_customer(tg_chat_id)
-    url = 'http://46.101.245.26:1488/customer_api/auth/independent_connect_services'
+    url = f'{NETUP_URL}/customer_api/auth/independent_connect_services'
     payload = json.dumps({
         "account_id": int(customer.netup_account_id),
         "setting_id": tariff_id
@@ -288,13 +281,13 @@ def connect_tariff(tg_chat_id: int, tariff_id: int):
 def make_promised_payment(tg_chat_id: int, value: int):
     session, customer = make_session_customer(tg_chat_id)
 
-    url = 'http://46.101.245.26:1488/customer_api/auth/promisedpaymentsettings'
+    url = f'{NETUP_URL}/customer_api/auth/promisedpaymentsettings'
     response = session.get(url)
     unpucked_response = response.json()
     max_value = unpucked_response['max_value']
     min_balance = unpucked_response['min_balance']
 
-    url = 'http://46.101.245.26:1488/customer_api/auth/profile'
+    url = f'{NETUP_URL}/customer_api/auth/profile'
     response = session.get(url)
     response.raise_for_status()
     balance = response.json()['balance']
@@ -302,7 +295,7 @@ def make_promised_payment(tg_chat_id: int, value: int):
     if value > max_value or balance < min_balance:
         return False
 
-    url = 'http://46.101.245.26:1488/customer_api/auth/promisedpayment'
+    url = f'{NETUP_URL}/customer_api/auth/promisedpayment'
     payload = json.dumps({
         "account_id": int(customer.netup_account_id),
         "value": value
@@ -316,14 +309,14 @@ def make_promised_payment(tg_chat_id: int, value: int):
 def fetch_promised_payment_status(tg_chat_id: int):
     session, customer = make_session_customer(tg_chat_id)
 
-    url = 'http://46.101.245.26:1488/customer_api/auth/promisedpaymentsettings'
+    url = f'{NETUP_URL}/customer_api/auth/promisedpaymentsettings'
     response = session.get(url)
     unpucked_response = response.json()
     max_value = unpucked_response['max_value']
     min_balance = unpucked_response['min_balance']
     is_enabled = unpucked_response['is_enabled'] == 1
 
-    url = 'http://46.101.245.26:1488/customer_api/auth/profile'
+    url = f'{NETUP_URL}/customer_api/auth/profile'
     response = session.get(url)
     response.raise_for_status()
     balance = response.json()['balance']
@@ -337,7 +330,7 @@ def fetch_promised_payment_status(tg_chat_id: int):
 
 def fetch_payment_history(tg_chat_id: int):
     session, customer = make_session_customer(tg_chat_id)
-    url = 'http://46.101.245.26:1488/customer_api/auth/full_statistics'
+    url = f'{NETUP_URL}/customer_api/auth/full_statistics'
     params = {'range': 12}
     response = session.get(url, params=params)
     response.raise_for_status()
