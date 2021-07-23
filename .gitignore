@@ -3,3 +3,4 @@
 /static/
 test_payload
 node-red.env
+.idea/

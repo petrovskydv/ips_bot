@@ -88,6 +88,6 @@ class Customer(models.Model):
 
 class Subscription(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer_id = models.ForeignKey(Customer, on_delete=models.DO_NOTHING)
+    customer_id = models.ForeignKey(Customer, on_delete=models.CASCADE)
     tariff_id = models.ForeignKey(Tariff, on_delete=models.CASCADE, verbose_name='Тариф')
     link_id = models.PositiveIntegerField()

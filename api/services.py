@@ -1,6 +1,10 @@
 from contextlib import suppress
 from datetime import datetime
+from dateutil import parser
+from dateutil.parser._parser import ParserError
+from datetime import datetime, date
 
+import time
 import requests
 import json
 import uuid
@@ -15,6 +19,14 @@ def fix_eight(phone_number: str) -> str:
     if phone_number.startswith('8'):
         return phone_number.replace('8', '+7')
     return phone_number
+
+
+def normalize_date(possible_date: str) -> str:
+    chars_to_replace = """_()-.\,"""
+    for character in possible_date:
+        if character in chars_to_replace:
+            possible_date = possible_date.replace(character, ' ')
+    return possible_date
 
 
 def normalize_phonenumber(phone_number: str) -> str:
@@ -53,6 +65,13 @@ def normalize_tariffs(tariffs: dict) -> dict:
             tariff.pop('comments', None)
 
     return tariffs
+
+
+def parse_date(possible_date):
+    try:
+        return parser.parse(possible_date).date()
+    except ParserError:
+        return None
 
 
 def rewrite_customer_tariffs(customer, tariffs):
@@ -154,6 +173,7 @@ def login_to_netup(normalized_data: dict) -> dict:
 
 def logout_from_netup(tg_chat_id):
     customer = Customer.objects.get(tg_chat_id=tg_chat_id)
+    # TODO кажись это строчка теперь не нужна
     customer.subscription_set.all().delete()
     customer.delete()
     return {'success': True}
@@ -335,3 +355,55 @@ def convert_payments(payments):
             'payment_incurrency': payment['payment_incurrency'],
         })
     return converted_payments
+
+
+def set_suspend(tg_chat_id, data):
+    session, customer = make_session_customer(tg_chat_id)
+    url = 'http://46.101.245.26:1488/customer_api/auth/enablesuspend'
+    start_timestamp = int(time.mktime(datetime.strptime(str(data['start_date']), "%Y-%m-%d").timetuple()))
+    end_timestamp = int(time.mktime(datetime.strptime(str(data['end_date']), "%Y-%m-%d").timetuple()))
+    payload = json.dumps({
+        "account_id": int(customer.netup_account_id),
+        "start": start_timestamp,
+        "end": end_timestamp
+    })
+    response = session.post(url, data=payload)
+    response.raise_for_status()
+    try:
+        unpucked_response = response.json()
+    except json.JSONDecodeError:
+        unpucked_response = {'result': 'NOT OK'}
+    return unpucked_response['result'] == 'OK'
+
+
+def fetch_suspension_settings(tg_chat_id):
+    session, customer = make_session_customer(tg_chat_id)
+    url = 'http://46.101.245.26:1488/customer_api/auth/voluntarysuspensionsettings'
+    response = session.get(url, params={'account_id': int(customer.netup_account_id)})
+    response.raise_for_status()
+    unpucked_response = response.json()
+    block_start = datetime.utcfromtimestamp(int(unpucked_response['block_start'])).strftime('%Y-%m-%d')
+    block_end = datetime.utcfromtimestamp(int(unpucked_response['block_end'])).strftime('%Y-%m-%d')
+    if unpucked_response['is_blocked']:
+        return {
+            'is_blocked': True,
+            'blocked_now': parse_date(block_start) <= date.today(),
+            'block_start': block_start,
+            'block_end': block_end
+        }
+    return {'is_blocked': False}
+
+
+def disable_suspension(tg_chat_id):
+    session, customer = make_session_customer(tg_chat_id)
+    url = 'http://46.101.245.26:1488/customer_api/auth/disablesuspend'
+    payload = json.dumps({
+        "account_id": int(customer.netup_account_id)
+    })
+    response = session.post(url, data=payload)
+    response.raise_for_status()
+    try:
+        unpucked_response = response.json()
+    except json.JSONDecodeError:
+        unpucked_response = {'result': 'NOT OK'}
+    return unpucked_response['result'] == 'OK'
