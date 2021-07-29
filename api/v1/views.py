@@ -1,14 +1,15 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from api.serializers import CustomerSerializer, DateSerializer
 from api.services import (
     fetch_customer_profile, change_tariff, login_to_netup, normalize_customer_data, fetch_tariffs,
     fetch_tariff_info, fetch_available_tariffs_info, logout_from_netup, connect_tariff,
     make_promised_payment, fetch_promised_payment_status, fetch_payment_history, set_suspend,
     fetch_suspension_settings, disable_suspension
 )
-from api.serializers import CustomerSerializer, DateSerializer
+from content.models import Customer
 
 
 class LoginApi(APIView):
@@ -146,3 +147,11 @@ def suspension_disable(request):
     tg_chat_id = request.data['tg_chat_id']
     result = disable_suspension(tg_chat_id)
     return Response({'success': result}, status=200)
+
+
+@api_view(['POST'])
+def check_authentication(request):
+    tg_chat_id = request.data['tg_chat_id']
+    if Customer.objects.filter(tg_chat_id=tg_chat_id).count() == 0:
+        return Response({'authenticated': False}, status=200)
+    return Response({'authenticated': True}, status=200)

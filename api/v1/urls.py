@@ -4,7 +4,7 @@ from .views import (
     LoginApi, ChangeTariff, FetchCustomerInfo, fetch_tariffs_view, fetch_tariff,
     fetch_available_tariffs_view, LogoutApi, add_tariff, make_promised_payment_view,
     check_promised_payment_view, fetch_payment_history_view, CheckDate, SetSuspend,
-    suspension_settings, suspension_disable
+    suspension_settings, suspension_disable, check_authentication
 )
 
 urlpatterns = [
@@ -23,4 +23,5 @@ urlpatterns = [
     path('promisedpayment/status', check_promised_payment_view),
     path('payments/history', fetch_payment_history_view),
     path('checkdate/', CheckDate.as_view()),
+    path('check_authentication/', check_authentication),
 ]
